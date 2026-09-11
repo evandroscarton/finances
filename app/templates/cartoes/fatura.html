@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block titulo %}Fatura - {{ cartao.nome }}{% endblock %}
+{% block conteudo %}
+<div class="page-header">
+    <h3>Fatura — {{ cartao.nome }}</h3>
+</div>
+
+<div class="card-panel mb-4" style="max-width: 350px; border-left: 4px solid var(--danger);">
+    <h6 class="text-muted mb-1">Total da Fatura (filtro aplicado)</h6>
+    <h3 class="valor-negativo mb-0">R$ {{ total_fatura|moeda_br }}</h3>
+</div>
+
+<!-- Filtro por intervalo de data de compensação. GET preserva o filtro na URL,
+     permitindo recarregar a página com os mesmos parâmetros. -->
+<div class="card-panel mb-4">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-auto">
+            <label class="form-label mb-0">Compensação de</label>
+            <input type="date" name="data_inicio" class="form-control" value="{{ filtros.data_inicio or '' }}">
+        </div>
+        <div class="col-auto">
+            <label class="form-label mb-0">até</label>
+            <input type="date" name="data_fim" class="form-control" value="{{ filtros.data_fim or '' }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+            <a href="{{ url_for('cartoes.fatura', cartao_id=cartao.id) }}" class="btn btn-outline-danger">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="table-panel mb-4">
+    <table class="table table-sm table-striped mb-0">
+        <thead>
+            <tr><th>Data Lançamento</th><th>Data Compensação</th><th>Descrição</th><th>Categoria</th><th>Valor</th></tr>
+        </thead>
+        <tbody>
+            {% for l in lancamentos %}
+            <tr>
+                <td>{{ l.data_lancamento.strftime('%d/%m/%Y') }}</td>
+                <td>{{ l.data_compensacao.strftime('%d/%m/%Y') if l.data_compensacao else '-' }}</td>
+                <td>{{ l.descricao }}</td>
+                <td>{{ l.categoria_nome or '-' }}</td>
+                <td class="valor-negativo">R$ {{ l.valor|moeda_br }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-4">Nenhum lançamento pendente para o filtro selecionado.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if lancamentos %}
+<div class="form-panel mb-3" style="max-width: 500px;">
+    <h5 class="mb-3" style="color: var(--brand-dark);">Pagar fatura</h5>
+    <p class="text-muted" style="font-size: 0.85rem;">
+        Apenas os lançamentos listados acima (respeitando o filtro de data de
+        compensação) serão marcados como compensados ao confirmar o pagamento.
+    </p>
+    <form method="post" action="{{ url_for('cartoes.pagar_fatura', cartao_id=cartao.id) }}" class="row g-3">
+        <!-- Filtro de período é reenviado como hidden para que o backend saiba
+             exatamente qual subconjunto de lançamentos deve compensar —
+             evita marcar TODOS os pendentes do cartão indevidamente. -->
+        <input type="hidden" name="data_inicio" value="{{ filtros.data_inicio or '' }}">
+        <input type="hidden" name="data_fim" value="{{ filtros.data_fim or '' }}">
+
+        <div class="col-12">
+            <label class="form-label">Conta de Pagamento</label>
+            <select name="conta_pagamento_id" class="form-select" required>
+                {% for conta in contas %}
+                <option value="{{ conta.id }}" {{ 'selected' if conta.id == cartao.conta_pagamento_id else '' }}>
+                    {{ conta.nome }} — Saldo: R$ {{ conta.saldo_compensado|moeda_br }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6">
+            <label class="form-label">Valor a Pagar</label>
+            <input type="number" step="0.01" name="valor" class="form-control"
+                   value="{{ total_fatura|moeda_br }}" required>
+        </div>
+        <div class="col-6">
+            <label class="form-label">Data do Pagamento</label>
+            <input type="date" name="data_pagamento" class="form-control" required>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Confirmar pagamento da fatura? Apenas os lançamentos listados serão compensados.');">
+                Pagar Fatura
+            </button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<a href="{{ url_for('cartoes.listar') }}" class="btn btn-outline-secondary">Voltar</a>
+{% endblock %}

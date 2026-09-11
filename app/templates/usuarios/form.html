@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block titulo %}Novo Usuário{% endblock %}
+{% block conteudo %}
+<div class="page-header">
+    <h3>Novo Usuário</h3>
+</div>
+
+<div class="form-panel">
+    <form method="post" class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Nome</label>
+            <input type="text" name="nome" class="form-control" value="{{ nome or '' }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">E-mail</label>
+            <input type="email" name="email" class="form-control" value="{{ email or '' }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Senha</label>
+            <input type="password" name="senha" class="form-control" minlength="6" required>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Cadastrar</button>
+            <a href="{{ url_for('usuarios.listar') }}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

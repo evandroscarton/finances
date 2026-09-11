@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block titulo %}{{ 'Editar' if lancamento else 'Novo' }} Lançamento{% endblock %}
+{% block conteudo %}
+<h3 class="mb-4">{{ 'Editar' if lancamento else 'Novo' }} Lançamento</h3>
+
+<form method="post">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Descrição</label>
+            <input type="text" name="descricao" class="form-control"
+                   value="{{ lancamento.descricao if lancamento else '' }}" required>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Valor (positivo=entrada, negativo=saída)</label>
+            <input type="number" step="0.01" name="valor" class="form-control"
+                   value="{{ lancamento.valor if lancamento else '' }}" required>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Data do Lançamento</label>
+            <input type="date" name="data_lancamento" class="form-control"
+                   value="{{ lancamento.data_lancamento.strftime('%Y-%m-%d') if lancamento else '' }}" required>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Conta</label>
+            <select name="conta_id" class="form-select">
+                <option value="">-- Nenhuma (usar cartão) --</option>
+                {% for c in contas %}
+                <option value="{{ c.id }}"
+                    {{ 'selected' if lancamento and lancamento.conta_id == c.id else '' }}>
+                    {{ c.nome }}
+                </option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">Preencha Conta OU Cartão, nunca ambos.</small>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Cartão de Crédito</label>
+            <select name="cartao_id" class="form-select">
+                <option value="">-- Nenhum (usar conta) --</option>
+                {% for c in cartoes %}
+                <option value="{{ c.id }}"
+                    {{ 'selected' if lancamento and lancamento.cartao_id == c.id else '' }}>
+                    {{ c.nome }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Categoria</label>
+            <select name="categoria_id" class="form-select" required>
+                <option value="">-- Selecione --</option>
+                {% for c in categorias %}
+                <option value="{{ c.id }}"
+                    {{ 'selected' if lancamento and lancamento.categoria_id == c.id else '' }}>
+                    {{ c.nome }} ({{ c.tipo }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select" required>
+                <option value="compensado" {{ 'selected' if lancamento and lancamento.status == 'compensado' else '' }}>Compensado</option>
+                <option value="pendente" {{ 'selected' if not lancamento or lancamento.status == 'pendente' else '' }}>Pendente</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Data de Compensação</label>
+            <input type="date" name="data_compensacao" class="form-control"
+                   value="{{ lancamento.data_compensacao.strftime('%Y-%m-%d') if lancamento and lancamento.data_compensacao else '' }}">
+            <small class="text-muted">Deixe em branco se ainda não compensado.</small>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="{{ url_for('lancamentos.listar') }}" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

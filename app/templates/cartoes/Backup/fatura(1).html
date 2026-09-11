@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}Fatura - {{ cartao.nome }}{% endblock %}
+{% block conteudo %}
+<h3 class="mb-3">Fatura — {{ cartao.nome }}</h3>
+
+<div class="card text-white bg-danger mb-4" style="max-width: 350px;">
+    <div class="card-body">
+        <h6>Total da Fatura (pendente)</h6>
+        <h3>R$ {{ "%.2f"|format(total_fatura|abs) }}</h3>
+    </div>
+</div>
+
+<table class="table table-sm table-striped mb-4">
+    <thead>
+        <tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th></tr>
+    </thead>
+    <tbody>
+        {% for l in lancamentos %}
+        <tr>
+            <td>{{ l.data_lancamento.strftime('%d/%m/%Y') }}</td>
+            <td>{{ l.descricao }}</td>
+            <td>{{ l.categoria_nome or '-' }}</td>
+            <td class="valor-negativo">R$ {{ "%.2f"|format(l.valor|abs) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted">Fatura sem lançamentos pendentes.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if lancamentos %}
+<h5>Pagar fatura</h5>
+<form method="post" action="{{ url_for('cartoes.pagar_fatura', cartao_id=cartao.id) }}" class="row g-3" style="max-width: 500px;">
+    <div class="col-12">
+        <label class="form-label">Conta de Pagamento</label>
+        <select name="conta_pagamento_id" class="form-select" required>
+            {% for conta in contas %}
+            <option value="{{ conta.id }}" {{ 'selected' if conta.id == cartao.conta_pagamento_id else '' }}>
+                {{ conta.nome }} — Saldo: R$ {{ "%.2f"|format(conta.saldo_compensado) }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-6">
+        <label class="form-label">Valor a Pagar</label>
+        <input type="number" step="0.01" name="valor" class="form-control"
+               value="{{ "%.2f"|format(total_fatura|abs) }}" required>
+    </div>
+    <div class="col-6">
+        <label class="form-label">Data do Pagamento</label>
+        <input type="date" name="data_pagamento" class="form-control" required>
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-success" onclick="return confirm('Confirmar pagamento da fatura?');">
+            Pagar Fatura
+        </button>
+    </div>
+</form>
+{% endif %}
+
+<a href="{{ url_for('cartoes.listar') }}" class="btn btn-outline-secondary mt-3">Voltar</a>
+{% endblock %}

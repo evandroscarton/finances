@@ -1,0 +1,190 @@
+"""
+Regras de negócio de Lançamentos.
+- Um lançamento pertence a exatamente UMA conta OU UM cartão (nunca ambos).
+- Valor é sempre gravado com sinal (positivo=entrada, negativo=saída).
+- Lançamentos de cartão validam limite disponível antes de gravar.
+- Se data_compensacao não for informada, assume a data_lancamento (regra de negócio).
+- Pagamento de fatura: cria lançamento de saída na conta + marca lançamentos
+  do cartão como compensados, em transação atômica.
+"""
+from decimal import Decimal, InvalidOperation
+from datetime import date
+from db.connection import get_cursor
+from repositories import lancamentos_repository as repo
+from services.cartoes_service import validar_limite_disponivel, ErroValidacao as ErroCartao
+
+
+class ErroValidacao(Exception):
+    pass
+
+
+STATUS_VALIDOS = {"compensado", "pendente"}
+
+
+def _to_decimal(valor):
+    try:
+        return Decimal(str(valor))
+    except InvalidOperation:
+        raise ErroValidacao("Valor monetário inválido.")
+
+
+def _validar_e_calcular_valor(valor, tipo_valor):
+    """Aplica o sinal correto: entrada=positivo, saída=negativo. Nunca zero."""
+    valor = _to_decimal(valor)
+    if valor == 0:
+        raise ErroValidacao("Valor do lançamento não pode ser zero.")
+    valor = abs(valor)
+    if tipo_valor == "saida":
+        valor = -valor
+    elif tipo_valor != "entrada":
+        raise ErroValidacao("Tipo de valor inválido. Use 'entrada' ou 'saida'.")
+    return valor
+
+
+def _resolver_data_compensacao(data_lancamento, data_compensacao):
+    """
+    Se data_compensacao não for informada, usa data_lancamento.
+    Regra de negócio: todo lançamento precisa de uma data de compensação
+    para que o cálculo de saldo compensado/projetado funcione corretamente;
+    na ausência de informação explícita, assume-se que compensa na própria
+    data do lançamento.
+    """
+    return data_compensacao or data_lancamento
+
+
+def criar_lancamento(usuario_id, conta_id, cartao_id, categoria_id, descricao,
+                      valor, tipo_valor, data_lancamento, data_compensacao, status):
+    if not descricao:
+        raise ErroValidacao("Descrição é obrigatória.")
+    if bool(conta_id) == bool(cartao_id):
+        raise ErroValidacao("Lançamento deve pertencer a exatamente uma conta OU um cartão.")
+    if status not in STATUS_VALIDOS:
+        raise ErroValidacao(f"Status inválido. Use um de: {', '.join(STATUS_VALIDOS)}.")
+    if not data_lancamento:
+        raise ErroValidacao("Data do lançamento é obrigatória.")
+
+    data_compensacao = _resolver_data_compensacao(data_lancamento, data_compensacao)
+    valor_final = _validar_e_calcular_valor(valor, tipo_valor)
+
+    with get_cursor(commit=True) as cur:
+        # Valida propriedade da conta/cartão antes de gravar
+        if conta_id:
+            cur.execute("SELECT id FROM contas WHERE id = %s AND usuario_id = %s", (conta_id, usuario_id))
+            if not cur.fetchone():
+                raise ErroValidacao("Conta não encontrada ou não pertence ao usuário.")
+        if cartao_id:
+            cur.execute("SELECT id FROM cartoes_credito WHERE id = %s AND usuario_id = %s", (cartao_id, usuario_id))
+            if not cur.fetchone():
+                raise ErroValidacao("Cartão não encontrado ou não pertence ao usuário.")
+            # Despesa de cartão: valida limite disponível antes de lançar
+            if valor_final < 0:
+                try:
+                    validar_limite_disponivel(cartao_id, usuario_id, valor_final)
+                except ErroCartao as e:
+                    raise ErroValidacao(str(e))
+        if categoria_id:
+            cur.execute("SELECT id FROM categorias WHERE id = %s AND usuario_id = %s", (categoria_id, usuario_id))
+            if not cur.fetchone():
+                raise ErroValidacao("Categoria não encontrada ou não pertence ao usuário.")
+
+        return repo.criar_lancamento(
+            cur, usuario_id, conta_id, cartao_id, categoria_id, descricao,
+            valor_final, data_lancamento, data_compensacao, status,
+        )
+
+
+def buscar_lancamento(lancamento_id, usuario_id):
+    with get_cursor() as cur:
+        return repo.buscar_lancamento(cur, lancamento_id, usuario_id)
+
+
+def atualizar_lancamento(lancamento_id, usuario_id, conta_id, cartao_id, categoria_id,
+                          descricao, valor, tipo_valor, data_lancamento, data_compensacao, status):
+    if not descricao:
+        raise ErroValidacao("Descrição é obrigatória.")
+    if bool(conta_id) == bool(cartao_id):
+        raise ErroValidacao("Lançamento deve pertencer a exatamente uma conta OU um cartão.")
+    if status not in STATUS_VALIDOS:
+        raise ErroValidacao(f"Status inválido. Use um de: {', '.join(STATUS_VALIDOS)}.")
+
+    data_compensacao = _resolver_data_compensacao(data_lancamento, data_compensacao)
+    valor_final = _validar_e_calcular_valor(valor, tipo_valor)
+
+    with get_cursor(commit=True) as cur:
+        existente = repo.buscar_lancamento(cur, lancamento_id, usuario_id)
+        if not existente:
+            raise ErroValidacao("Lançamento não encontrado ou não pertence ao usuário.")
+        if existente["transferencia_id"]:
+            raise ErroValidacao("Lançamentos de transferência não podem ser editados diretamente.")
+
+        return repo.atualizar_lancamento(
+            cur, lancamento_id, usuario_id, conta_id, cartao_id, categoria_id,
+            descricao, valor_final, data_lancamento, data_compensacao, status,
+        )
+
+
+def excluir_lancamento(lancamento_id, usuario_id):
+    with get_cursor(commit=True) as cur:
+        existente = repo.buscar_lancamento(cur, lancamento_id, usuario_id)
+        if not existente:
+            raise ErroValidacao("Lançamento não encontrado ou não pertence ao usuário.")
+        if existente["transferencia_id"]:
+            raise ErroValidacao("Exclua a transferência inteira, não um lançamento isolado.")
+
+        return repo.excluir_lancamento(cur, lancamento_id, usuario_id)
+
+
+def listar_com_filtros(usuario_id, filtros):
+    with get_cursor() as cur:
+        return repo.listar_com_filtros(cur, usuario_id, filtros)
+
+
+def pagar_fatura_cartao(usuario_id, cartao_id, conta_pagamento_id, valor, data_pagamento):
+    """
+    Paga a fatura do cartão:
+    1. Cria lançamento de SAÍDA na conta de pagamento (afeta saldo da conta).
+    2. Marca todos os lançamentos pendentes do cartão como 'compensado'
+       com data_compensacao = data_pagamento.
+    Tudo em UMA transação atômica — rollback se qualquer etapa falhar.
+    Lançamentos de cartão NÃO afetam saldo de conta diretamente; só o
+    pagamento da fatura (este lançamento) afeta.
+    """
+    valor = _to_decimal(valor)
+    if valor <= 0:
+        raise ErroValidacao("Valor do pagamento deve ser positivo.")
+    if not data_pagamento:
+        raise ErroValidacao("Data do pagamento é obrigatória.")
+
+    with get_cursor(commit=True) as cur:
+        cur.execute(
+            "SELECT id FROM contas WHERE id = %s AND usuario_id = %s",
+            (conta_pagamento_id, usuario_id),
+        )
+        if not cur.fetchone():
+            raise ErroValidacao("Conta de pagamento não encontrada ou não pertence ao usuário.")
+
+        cur.execute(
+            "SELECT nome FROM cartoes_credito WHERE id = %s AND usuario_id = %s",
+            (cartao_id, usuario_id),
+        )
+        cartao = cur.fetchone()
+        if not cartao:
+            raise ErroValidacao("Cartão não encontrado ou não pertence ao usuário.")
+
+        # 1. Lançamento de saída na conta (pagamento da fatura)
+        repo.criar_lancamento(
+            cur, usuario_id, conta_pagamento_id, None, None,
+            f"Pagamento fatura {cartao['nome']}", -valor,
+            data_pagamento, data_pagamento, "compensado",
+        )
+
+        # 2. Marca lançamentos pendentes do cartão como compensados
+        cur.execute(
+            """
+            UPDATE lancamentos
+            SET status = 'compensado', data_compensacao = %s
+            WHERE cartao_id = %s AND usuario_id = %s AND status = 'pendente'
+            """,
+            (data_pagamento, cartao_id, usuario_id),
+        )
+        return True

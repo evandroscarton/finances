@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block titulo %}Lançamentos{% endblock %}
+{% block conteudo %}
+<div class="page-header">
+    <h3>Lançamentos</h3>
+    <!-- Repassa os filtros atuais na URL do "Novo Lançamento" para que o
+         formulário saiba para onde voltar preservando o contexto de busca. -->
+    <a href="{{ url_for('lancamentos.novo',
+                conta_id=filtros.conta_id, cartao_id=filtros.cartao_id,
+                categoria_id=filtros.categoria_id, status=filtros.status,
+                data_inicio=filtros.data_inicio, data_fim=filtros.data_fim) }}"
+       class="btn btn-primary">+ Novo Lançamento</a>
+</div>
+
+<div class="card-panel mb-4">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-auto">
+            <select name="conta_id" class="form-select">
+                <option value="">Todas as contas</option>
+                {% for c in contas %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.conta_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="cartao_id" class="form-select">
+                <option value="">Todos os cartões</option>
+                {% for c in cartoes %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.cartao_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="categoria_id" class="form-select">
+                <option value="">Todas as categorias</option>
+                {% for c in categorias %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.categoria_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="status" class="form-select">
+                <option value="">Todos os status</option>
+                <option value="compensado" {{ 'selected' if filtros.status == 'compensado' else '' }}>Compensado</option>
+                <option value="pendente" {{ 'selected' if filtros.status == 'pendente' else '' }}>Pendente</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <input type="date" name="data_inicio" class="form-control" value="{{ filtros.data_inicio or '' }}">
+        </div>
+        <div class="col-auto">
+            <input type="date" name="data_fim" class="form-control" value="{{ filtros.data_fim or '' }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+            <a href="{{ url_for('lancamentos.listar') }}" class="btn btn-outline-danger">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="table-panel">
+    <table class="table table-striped table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Conta/Cartão</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Compensação</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lancamentos %}
+            <tr>
+                <td>{{ l.data_lancamento.strftime('%d/%m/%Y') }}</td>
+                <td>{{ l.descricao }}</td>
+                <td>{{ l.categoria_nome or '-' }}</td>
+                <td>
+                    {% if l.conta_nome %}
+                        {{ l.conta_nome }}
+                    {% elif l.cartao_nome %}
+                        {{ l.cartao_nome }} (cartão)
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="{{ 'valor-positivo' if l.valor > 0 else 'valor-negativo' }}">
+                    {{ l.valor|moeda_br }}
+                </td>
+                <td>
+                    {% if l.status == 'compensado' %}
+                        <span class="badge bg-success">Compensado</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Pendente</span>
+                    {% endif %}
+                </td>
+                <td>{{ l.data_compensacao.strftime('%d/%m/%Y') if l.data_compensacao else '-' }}</td>
+                <td>
+                    <a href="{{ url_for('lancamentos.editar', lancamento_id=l.id,
+                            conta_id=filtros.conta_id, cartao_id=filtros.cartao_id,
+                            categoria_id=filtros.categoria_id, status=filtros.status,
+                            data_inicio=filtros.data_inicio, data_fim=filtros.data_fim) }}"
+                       class="btn btn-sm btn-outline-primary">Editar</a>
+                    {% if l.status == 'pendente' %}
+                    <form method="post" action="{{ url_for('lancamentos.compensar', lancamento_id=l.id) }}" class="d-inline" onsubmit="return confirm('Marcar este lançamento como compensado?');">
+                        <button type="submit" class="btn btn-sm btn-outline-success">Compensar</button>
+                    </form>
+                    {% endif %}
+                    {% if not l.transferencia_id %}
+                    <form method="post" action="{{ url_for('lancamentos.excluir', lancamento_id=l.id) }}" class="d-inline" onsubmit="return confirm('Excluir este lançamento?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">Nenhum lançamento encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

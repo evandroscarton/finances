@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Registrar{% endblock %}
+{% block conteudo %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="form-panel">
+            <h3 class="mb-4 text-center">Criar Conta</h3>
+            <form method="post">
+                <div class="mb-3">
+                    <label class="form-label">Nome</label>
+                    <input type="text" name="nome" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Senha</label>
+                    <input type="password" name="senha" class="form-control" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Registrar</button>
+            </form>
+            <p class="text-center mt-3">
+                Já tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

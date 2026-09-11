@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block titulo %}Lançamentos Previstos{% endblock %}
+{% block conteudo %}
+<div class="page-header">
+    <h3>Lançamentos Previstos</h3>
+    <a href="{{ url_for('lancamentos_previstos.novo') }}" class="btn btn-primary">+ Novo Previsto</a>
+</div>
+
+<!-- Atualização em massa: troca o mes_ano de TODOS os previstos do usuário
+     de uma vez (ex.: virou o mês, quer reaproveitar todos os modelos). -->
+<div class="card-panel mb-4">
+    <form method="post" action="{{ url_for('lancamentos_previstos.atualizar_mes_ano_em_massa') }}"
+          class="row g-2 align-items-end"
+          onsubmit="return confirm('Isso vai alterar o Mês/Ano de TODOS os lançamentos previstos. Confirmar?');">
+        <div class="col-auto">
+            <label class="form-label mb-0">Alterar Mês/Ano em massa</label>
+            <input type="month" name="mes_ano_massa" class="form-control" required>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-warning">Atualizar Todos</button>
+        </div>
+    </form>
+</div>
+
+<div class="card-panel mb-4">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-auto">
+            <select name="conta_id" class="form-select">
+                <option value="">Todas as contas</option>
+                {% for c in contas %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.conta_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="cartao_id" class="form-select">
+                <option value="">Todos os cartões</option>
+                {% for c in cartoes %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.cartao_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="categoria_id" class="form-select">
+                <option value="">Todas as categorias</option>
+                {% for c in categorias %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.categoria_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <!-- Novo filtro: intervalo de data da última vez que o previsto foi
+             efetivamente lançado (ultimo_lancamento_em). Útil para achar
+             modelos "esquecidos" (nunca lançados ou lançados há muito tempo). -->
+        <div class="col-auto">
+            <label class="form-label mb-0">Últ. lançado de</label>
+            <input type="date" name="ultimo_lancamento_inicio" class="form-control"
+                   value="{{ filtros.ultimo_lancamento_inicio or '' }}">
+        </div>
+        <div class="col-auto">
+            <label class="form-label mb-0">até</label>
+            <input type="date" name="ultimo_lancamento_fim" class="form-control"
+                   value="{{ filtros.ultimo_lancamento_fim or '' }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+            <a href="{{ url_for('lancamentos_previstos.listar') }}" class="btn btn-outline-danger">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="table-panel">
+    <table class="table table-striped table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Dia</th>
+                <th>Mês/Ano</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Conta/Cartão</th>
+                <th>Valor</th>
+                <th>Última vez lançado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in previstos %}
+            <tr>
+                <td>{{ p.dia_mes }}</td>
+                <td>{{ p.mes_ano.strftime('%m/%Y') }}</td>
+                <td>{{ p.descricao }}</td>
+                <td>{{ p.categoria_nome or '-' }}</td>
+                <td>
+                    {% if p.conta_nome %}
+                        {{ p.conta_nome }}
+                    {% elif p.cartao_nome %}
+                        {{ p.cartao_nome }} (cartão)
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="{{ 'valor-positivo' if p.valor > 0 else 'valor-negativo' }}">
+                    {{ p.valor|moeda_br }}
+                </td>
+                <td>{{ p.ultimo_lancamento_em.strftime('%d/%m/%Y') if p.ultimo_lancamento_em else '-' }}</td>
+                <td class="text-nowrap">
+                    <form method="post" action="{{ url_for('lancamentos_previstos.lancar', previsto_id=p.id,
+                            conta_id=filtros.conta_id, cartao_id=filtros.cartao_id,
+                            categoria_id=filtros.categoria_id,
+                            ultimo_lancamento_inicio=filtros.ultimo_lancamento_inicio,
+                            ultimo_lancamento_fim=filtros.ultimo_lancamento_fim) }}"
+                          class="d-inline" onsubmit="return confirm('Lançar este registro na tela de Lançamentos?');">
+                        <button type="submit" class="btn btn-sm btn-success">Lançar</button>
+                    </form>
+                    <a href="{{ url_for('lancamentos_previstos.editar', previsto_id=p.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                    <form method="post" action="{{ url_for('lancamentos_previstos.excluir', previsto_id=p.id,
+                            conta_id=filtros.conta_id, cartao_id=filtros.cartao_id,
+                            categoria_id=filtros.categoria_id,
+                            ultimo_lancamento_inicio=filtros.ultimo_lancamento_inicio,
+                            ultimo_lancamento_fim=filtros.ultimo_lancamento_fim) }}"
+                          class="d-inline" onsubmit="return confirm('Excluir este lançamento previsto?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">Nenhum lançamento previsto cadastrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

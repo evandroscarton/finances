@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titulo %}Cartões{% endblock %}
+{% block conteudo %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Cartões de Crédito</h3>
+    <a href="{{ url_for('cartoes.novo') }}" class="btn btn-primary">+ Novo Cartão</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th><th>Limite</th><th>Fatura Atual</th>
+            <th>Fechamento</th><th>Vencimento</th><th>Conta Pagamento</th><th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in cartoes %}
+        <tr>
+            <td>{{ c.nome }}</td>
+            <td>R$ {{ "%.2f"|format(c.limite) }}</td>
+            <td class="valor-negativo">R$ {{ "%.2f"|format(c.fatura_atual|abs) }}</td>
+            <td>Dia {{ c.dia_fechamento }}</td>
+            <td>Dia {{ c.dia_vencimento }}</td>
+            <td>{{ c.conta_pagamento_nome }}</td>
+            <td>
+                <a href="{{ url_for('cartoes.fatura', cartao_id=c.id) }}" class="btn btn-sm btn-outline-info">Fatura</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted">Nenhum cartão cadastrado.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

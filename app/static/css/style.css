@@ -1,0 +1,145 @@
+/*
+ * Design tokens globais do Finance.
+ * Reaproveita a identidade visual do sidebar (#1E293B) em toda a aplicação:
+ * cards, tabelas, botões, formulários e badges de valor (positivo/negativo).
+ */
+
+:root {
+    --brand-dark: #1E293B;
+    --brand-dark-hover: #334155;
+    --brand-accent: #3B82F6;
+    --brand-accent-hover: #2563EB;
+    --text-muted: #64748B;
+    --border-color: #E2E8F0;
+    --bg-page: #F1F5F9;
+    --success: #16A34A;
+    --danger: #DC2626;
+}
+
+body {
+    background-color: var(--bg-page);
+    color: #1E293B;
+}
+
+/* ---------- Títulos de página ---------- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--brand-dark);
+}
+
+.page-header h3 {
+    margin: 0;
+    color: var(--brand-dark);
+    font-weight: 700;
+}
+
+/* ---------- Cards ---------- */
+.card-panel {
+    background-color: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    padding: 1.5rem;
+}
+
+/* ---------- Botões (identidade do menu) ---------- */
+.btn-primary {
+    background-color: var(--brand-dark);
+    border-color: var(--brand-dark);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--brand-dark-hover);
+    border-color: var(--brand-dark-hover);
+}
+
+.btn-outline-secondary {
+    color: var(--brand-dark);
+    border-color: var(--brand-dark);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--brand-dark);
+    border-color: var(--brand-dark);
+    color: #FFFFFF;
+}
+
+.btn-outline-info {
+    color: var(--brand-accent);
+    border-color: var(--brand-accent);
+}
+
+.btn-outline-info:hover {
+    background-color: var(--brand-accent);
+    border-color: var(--brand-accent);
+    color: #FFFFFF;
+}
+
+/* ---------- Tabelas ---------- */
+.table-panel {
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.table-panel table {
+    margin-bottom: 0;
+}
+
+.table-panel thead th {
+    background-color: var(--brand-dark);
+    color: #FFFFFF;
+    font-weight: 600;
+    border: none;
+    vertical-align: middle;
+}
+
+.table-panel tbody tr:hover {
+    background-color: #F8FAFC;
+}
+
+.table-panel td,
+.table-panel th {
+    vertical-align: middle;
+    padding: 0.85rem 1rem;
+}
+
+/* ---------- Valores monetários ---------- */
+.valor-positivo {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.valor-negativo {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+
+/* ---------- Formulários ---------- */
+.form-panel {
+    background-color: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    padding: 2rem;
+}
+
+.form-panel .form-label {
+    font-weight: 600;
+    color: var(--brand-dark);
+}
+
+.form-panel .form-control:focus,
+.form-panel .form-select:focus {
+    border-color: var(--brand-accent);
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
+}
+
+.linha-quebra-data td {border-top: 3px solid #495057 !important;}

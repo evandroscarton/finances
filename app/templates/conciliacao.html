@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block titulo %}Conciliação de Extrato - Finance{% endblock %}
+
+{% block conteudo %}
+<h1 class="h4 mb-4"><i class="bi bi-file-earmark-check"></i> Conciliação de Extrato</h1>
+
+<form class="row g-3 align-items-end mb-4" method="POST"
+      action="{{ url_for('conciliacao.importar_extrato') }}" enctype="multipart/form-data">
+    <div class="col-auto">
+        <label for="conta_id" class="form-label">Conta</label>
+        <select name="conta_id" id="conta_id" class="form-select" required>
+            <option value="">Selecione...</option>
+            {% for conta in contas %}
+                <option value="{{ conta.id }}" {% if conta_selecionada == conta.id %}selected{% endif %}>
+                    {{ conta.nome }} - {{ conta.banco }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <label for="arquivo_pdf" class="form-label">Extrato (PDF)</label>
+        <input type="file" name="arquivo_pdf" id="arquivo_pdf" class="form-control" accept="application/pdf" required>
+    </div>
+
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Importar e Conciliar
+        </button>
+    </div>
+</form>
+
+{% if resultado %}
+    <div class="alert alert-secondary">
+        <strong>Período do extrato:</strong>
+        {{ resultado.data_inicio.strftime('%d/%m/%Y') }} a {{ resultado.data_fim.strftime('%d/%m/%Y') }}
+        &nbsp;|&nbsp; <strong>Linhas do PDF:</strong> {{ resultado.total_linhas_pdf }}
+        &nbsp;|&nbsp; <strong>Encontradas:</strong> {{ resultado.total_encontrados }}
+        &nbsp;|&nbsp; <strong>Não encontradas:</strong> {{ resultado.total_nao_encontrados }}
+        &nbsp;|&nbsp; <strong>Somente no sistema:</strong> {{ resultado.lancamentos_somente_sistema|length }}
+    </div>
+
+    <h2 class="h5 mt-4">Linhas do PDF</h2>
+    <table class="table table-bordered table-sm">
+        <thead class="table-light">
+            <tr>
+                <th>Data</th><th>Descrição</th><th>Valor</th><th>Tipo</th><th>Situação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for linha in resultado.linhas_pdf %}
+                <tr class="{{ 'table-success' if linha.status == 'encontrado' else 'table-danger' }}">
+                    <td>{{ linha.data.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        {# Quando encontrado, exibe a descrição cadastrada no sistema
+                           (mais legível); quando não encontrado, exibe a descrição
+                           lida do PDF, já que não há lançamento do sistema para comparar. #}
+                        {% if linha.status == 'encontrado' %}
+                            {{ linha.descricao_sistema }}
+                        {% else %}
+                            {{ linha.descricao }}
+                        {% endif %}
+                    </td>
+                    <td>{{ linha.valor|moeda_br }}</td>
+                    <td>{{ 'Crédito (entrada)' if linha.tipo == 'credito' else 'Débito (saída)' }}</td>
+                    <td>
+                        {% if linha.status == 'encontrado' %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Encontrado</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Não encontrado</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="h5 mt-4">Lançamentos que existem somente no sistema (não constam no PDF)</h2>
+    {% if resultado.lancamentos_somente_sistema %}
+        <table class="table table-bordered table-sm">
+            <thead class="table-light">
+                <tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for lanc in resultado.lancamentos_somente_sistema %}
+                    <tr class="table-warning">
+                        <td>{{ lanc.data_lancamento.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ lanc.descricao }}</td>
+                        <td>{{ lanc.valor|moeda_br }}</td>
+                        <td>{{ lanc.status }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="text-muted">Nenhum lançamento divergente encontrado — extrato totalmente conciliado.</p>
+    {% endif %}
+{% endif %}
+{% endblock %}

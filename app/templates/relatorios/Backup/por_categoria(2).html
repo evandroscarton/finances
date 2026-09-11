@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block titulo %}Relatório por Categoria{% endblock %}
+{% block conteudo %}
+<h3 class="mb-4">Lançamentos por Categoria</h3>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-auto">
+        <select name="conta_id" class="form-select">
+            <option value="">Todas as contas</option>
+            {% for c in contas %}
+            <option value="{{ c.id }}" {{ 'selected' if filtros.conta_id == c.id else '' }}>{{ c.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="cartao_id" class="form-select">
+            <option value="">Todos os cartões</option>
+            {% for c in cartoes %}
+            <option value="{{ c.id }}" {{ 'selected' if filtros.cartao_id == c.id else '' }}>{{ c.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="tipo" class="form-select">
+            <option value="">Todos os tipos</option>
+            <option value="receita" {{ 'selected' if filtros.tipo == 'receita' else '' }}>Receita</option>
+            <option value="despesa" {{ 'selected' if filtros.tipo == 'despesa' else '' }}>Despesa</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <input type="date" name="data_inicio" class="form-control" value="{{ filtros.data_inicio or '' }}">
+    </div>
+    <div class="col-auto">
+        <input type="date" name="data_fim" class="form-control" value="{{ filtros.data_fim or '' }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+        <a href="{{ url_for('relatorios.por_categoria') }}" class="btn btn-outline-danger">Limpar</a>
+    </div>
+</form>
+
+<div class="alert {{ 'alert-success' if total_geral >= 0 else 'alert-danger' }}">
+    <strong>Total do período:</strong> R$ {{ total_geral|moeda_br }}
+</div>
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Categoria</th>
+            <th>Tipo</th>
+            <th>Quantidade</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cat in categorias %}
+        <tr>
+            <td>
+                {% if cat.categoria_cor %}
+                <span class="badge" style="background-color: {{ cat.categoria_cor }};">&nbsp;</span>
+                {% endif %}
+                {{ cat.categoria_nome }}
+            </td>
+            <td>
+                <span class="badge {{ 'bg-success' if cat.categoria_tipo == 'receita' else 'bg-danger' }}">
+                    {{ cat.categoria_tipo|capitalize }}
+                </span>
+            </td>
+            <td>{{ cat.quantidade }}</td>
+            <td class="{{ 'text-success' if cat.total > 0 else 'text-danger' }}">
+                R$ {{ cat.total|moeda_br }}
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4" class="text-center text-muted">Nenhum lançamento encontrado para os filtros selecionados.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

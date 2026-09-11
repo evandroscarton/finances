@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block titulo %}Relatório por Categoria{% endblock %}
+{% block conteudo %}
+<div class="page-header">
+    <h3>Lançamentos por Categoria</h3>
+</div>
+
+<div class="card-panel mb-4">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-auto">
+            <select name="conta_id" class="form-select">
+                <option value="">Todas as contas</option>
+                {% for c in contas %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.conta_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="cartao_id" class="form-select">
+                <option value="">Todos os cartões</option>
+                {% for c in cartoes %}
+                <option value="{{ c.id }}" {{ 'selected' if filtros.cartao_id == c.id else '' }}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="tipo" class="form-select">
+                <option value="">Todos os tipos</option>
+                <option value="receita" {{ 'selected' if filtros.tipo == 'receita' else '' }}>Receita</option>
+                <option value="despesa" {{ 'selected' if filtros.tipo == 'despesa' else '' }}>Despesa</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <input type="date" name="data_inicio" class="form-control" value="{{ filtros.data_inicio or '' }}">
+        </div>
+        <div class="col-auto">
+            <input type="date" name="data_fim" class="form-control" value="{{ filtros.data_fim or '' }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+            <a href="{{ url_for('relatorios.por_categoria') }}" class="btn btn-outline-danger">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="card-panel mb-4 d-flex justify-content-between align-items-center" style="border-left: 4px solid {{ 'var(--success)' if total_geral >= 0 else 'var(--danger)' }};">
+    <div>
+        <span class="fw-bold" style="color: var(--brand-dark);">Total do período:</span>
+        <span class="{{ 'valor-positivo' if total_geral >= 0 else 'valor-negativo' }}">
+            R$ {{ total_geral|moeda_br }}
+        </span>
+    </div>
+    <!-- Botão só faz sentido se houver ao menos uma categoria de despesa no resultado -->
+    {% if categorias|selectattr('categoria_tipo', 'equalto', 'despesa')|list %}
+    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalGraficoDespesas">
+        📊 Ver Gráfico de Despesas
+    </button>
+    {% endif %}
+</div>
+
+<div class="table-panel">
+    <table class="table table-striped table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Tipo</th>
+                <th>Quantidade</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cat in categorias %}
+            <tr>
+                <td>
+                    {% if cat.categoria_cor %}
+                    <span class="badge" style="background-color: {{ cat.categoria_cor }};">&nbsp;</span>
+                    {% endif %}
+                    {{ cat.categoria_nome }}
+                </td>
+                <td>
+                    <span class="badge {{ 'bg-success' if cat.categoria_tipo == 'receita' else 'bg-danger' }}">
+                        {{ cat.categoria_tipo|capitalize }}
+                    </span>
+                </td>
+                <td>{{ cat.quantidade }}</td>
+                <td class="{{ 'valor-positivo' if cat.total > 0 else 'valor-negativo' }}">
+                    R$ {{ cat.total|moeda_br }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center text-muted py-4">Nenhum lançamento encontrado para os filtros selecionados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal com o gráfico de colunas das despesas.
+     Os dados são renderizados no HTML (data-atributos) e lidos via JS no cliente,
+     evitando nova chamada ao backend: reaproveita os dados já carregados na tabela. -->
+<div class="modal fade" id="modalGraficoDespesas" tabindex="-1" aria-labelledby="modalGraficoDespesasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalGraficoDespesasLabel">Despesas por Categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="graficoDespesas" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js via CDN — biblioteca leve para gráficos, sem necessidade de build/bundler -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Dados injetados pelo Jinja: apenas categorias do tipo "despesa".
+    // Valor é convertido para positivo (abs) só para exibição no gráfico —
+    // não altera o dado exibido na tabela, que mantém o sinal original.
+    const labels = [{% for cat in categorias if cat.categoria_tipo == 'despesa' %}{{ cat.categoria_nome|tojson }},{% endfor %}];
+    const valores = [{% for cat in categorias if cat.categoria_tipo == 'despesa' %}{{ (cat.total|abs) }},{% endfor %}];
+    const cores = [{% for cat in categorias if cat.categoria_tipo == 'despesa' %}{{ (cat.categoria_cor or '#dc3545')|tojson }},{% endfor %}];
+
+    const modalEl = document.getElementById('modalGraficoDespesas');
+    let chartInstance = null;
+
+    // Chart.js precisa que o canvas esteja visível para calcular dimensões corretamente,
+    // por isso o gráfico é criado apenas quando o modal é exibido (evento shown.bs.modal).
+    modalEl.addEventListener('shown.bs.modal', function () {
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        const ctx = document.getElementById('graficoDespesas').getContext('2d');
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Despesas (R$)',
+                    data: valores,
+                    backgroundColor: cores
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return 'R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

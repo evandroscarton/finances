@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block titulo %}Transferências{% endblock %}
+{% block conteudo %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Transferências</h3>
+    <a href="{{ url_for('transferencias.nova') }}" class="btn btn-primary">+ Nova Transferência</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr><th>Data</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Descrição</th><th>Ações</th></tr>
+    </thead>
+    <tbody>
+        {% for t in transferencias %}
+        <tr>
+            <td>{{ t.data.strftime('%d/%m/%Y') }}</td>
+            <td>🏦 {{ t.conta_origem_nome }}</td>
+            <td>🏦 {{ t.conta_destino_nome }}</td>
+            <td>R$ {{ t.valor|moeda_br }}</td>
+            <td>{{ t.descricao }}</td>
+            <td>
+                <form method="post" action="{{ url_for('transferencias.excluir', transferencia_id=t.id) }}"
+                      onsubmit="return confirm('Excluir esta transferência? Os 2 lançamentos vinculados serão removidos.');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted">Nenhuma transferência realizada.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

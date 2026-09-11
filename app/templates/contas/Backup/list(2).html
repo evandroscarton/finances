@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Contas{% endblock %}
+{% block conteudo %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Contas</h3>
+    <a href="{{ url_for('contas.nova') }}" class="btn btn-primary">+ Nova Conta</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th><th>Banco</th><th>Tipo</th>
+            <th>Saldo Compensado</th><th>Saldo Projetado</th><th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in contas %}
+        <tr>
+            <td>{{ c.nome }}</td>
+            <td>{{ c.banco }}</td>
+            <td>{{ c.tipo }}</td>
+            <td class="{{ 'valor-positivo' if c.saldo_compensado >= 0 else 'valor-negativo' }}">
+                R$ {{ c.saldo_compensado|moeda_br }}
+            </td>
+            <td class="{{ 'valor-positivo' if c.saldo_projetado >= 0 else 'valor-negativo' }}">
+                R$ {{ c.saldo_projetado|moeda_br }}
+            </td>
+            <td>
+                <a href="{{ url_for('contas.extrato', conta_id=c.id) }}" class="btn btn-sm btn-outline-info">Extrato</a>
+                <a href="{{ url_for('contas.editar', conta_id=c.id) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                <form method="post" action="{{ url_for('contas.excluir', conta_id=c.id) }}" class="d-inline"
+                      onsubmit="return confirm('Excluir esta conta?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted">Nenhuma conta cadastrada.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

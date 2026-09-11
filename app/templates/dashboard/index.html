@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard{% endblock %}
+{% block conteudo %}
+<h3 class="mb-4">Visão geral</h3>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>Saldo Compensado Total</h6>
+                <h3>R$ {{ saldo_total_compensado|moeda_br }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h6>Saldo Projetado Total</h6>
+                <h3>R$ {{ saldo_total_projetado|moeda_br }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h5>Saldo por conta</h5>
+<table class="table table-striped">
+    <thead>
+        <tr><th>Conta</th><th>Banco</th><th>Saldo Compensado</th><th>Saldo Projetado</th></tr>
+    </thead>
+    <tbody>
+        {% for c in contas %}
+        <tr>
+            <td>{{ c.nome }}</td>
+            <td>{{ c.banco }}</td>
+            <td class="{{ 'valor-positivo' if c.saldo_compensado >= 0 else 'valor-negativo' }}">
+                R$ {{ c.saldo_compensado|moeda_br }}
+            </td>
+            <td class="{{ 'valor-positivo' if c.saldo_projetado >= 0 else 'valor-negativo' }}">
+                R$ {{ c.saldo_projetado|moeda_br }}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted">Nenhuma conta cadastrada.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

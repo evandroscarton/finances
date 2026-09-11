@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}{{ 'Editar' if categoria else 'Nova' }} Categoria{% endblock %}
+{% block conteudo %}
+<h3 class="mb-4">{{ 'Editar Categoria' if categoria else 'Nova Categoria' }}</h3>
+
+<form method="post" class="row g-3" style="max-width: 500px;">
+    <div class="col-12">
+        <label class="form-label">Nome</label>
+        <input type="text" name="nome" class="form-control" value="{{ categoria.nome if categoria else '' }}" required>
+    </div>
+    <div class="col-12">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select" required>
+            {% set tipo_atual = categoria.tipo if categoria else '' %}
+            <option value="receita" {{ 'selected' if tipo_atual == 'receita' else '' }}>Receita</option>
+            <option value="despesa" {{ 'selected' if tipo_atual == 'despesa' else '' }}>Despesa</option>
+        </select>
+    </div>
+    <div class="col-12">
+        <label class="form-label">Cor (opcional)</label>
+        <input type="color" name="cor" class="form-control form-control-color"
+               value="{{ categoria.cor if categoria and categoria.cor else '#0d6efd' }}">
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="{{ url_for('categorias.listar') }}" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

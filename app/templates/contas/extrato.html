@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titulo %}Extrato - {{ conta.nome }}{% endblock %}
+{% block conteudo %}
+<h3 class="mb-3">Extrato — {{ conta.nome }}</h3>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>Saldo Compensado</h6>
+                <h4>R$ {{ "%.2f"|format(saldo_compensado) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h6>Saldo Projetado</h6>
+                <h4>R$ {{ "%.2f"|format(saldo_projetado) }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-auto">
+        <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio or '' }}">
+    </div>
+    <div class="col-auto">
+        <input type="date" name="data_fim" class="form-control" value="{{ data_fim or '' }}">
+    </div>
+    <div class="col-auto">
+        <select name="status" class="form-select">
+            <option value="">Todos os status</option>
+            <option value="compensado" {{ 'selected' if status == 'compensado' else '' }}>Compensado</option>
+            <option value="pendente" {{ 'selected' if status == 'pendente' else '' }}>Pendente</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+    </div>
+</form>
+
+<table class="table table-sm table-striped">
+    <thead>
+        <tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Status</th><th>Valor</th></tr>
+    </thead>
+    <tbody>
+        {% for l in lancamentos %}
+        <tr>
+            <td>{{ l.data_lancamento.strftime('%d/%m/%Y') }}</td>
+            <td>{{ l.descricao }}</td>
+            <td>{{ l.categoria_nome or '-' }}</td>
+            <td><span class="badge bg-{{ 'success' if l.status == 'compensado' else 'warning' }}">{{ l.status }}</span></td>
+            <td class="{{ 'valor-positivo' if l.valor >= 0 else 'valor-negativo' }}">
+                R$ {{ "%.2f"|format(l.valor) }}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted">Nenhum lançamento encontrado.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('contas.listar') }}" class="btn btn-outline-secondary">Voltar</a>
+{% endblock %}

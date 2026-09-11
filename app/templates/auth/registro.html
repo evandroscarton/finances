@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Cadastro{% endblock %}
+{% block conteudo_publico %}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="form-panel">
+            <h3 class="mb-4 text-center">Criar conta</h3>
+            <form method="post" action="{{ url_for('auth.registrar') }}">
+                <div class="mb-3">
+                    <label class="form-label">Nome</label>
+                    <input type="text" name="nome" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Senha</label>
+                    <input type="password" name="senha" class="form-control" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-success w-100">Cadastrar</button>
+            </form>
+            <p class="mt-3 text-center">Já tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
