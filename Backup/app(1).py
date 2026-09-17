@@ -2,22 +2,27 @@
 Cadastro de Contas - CRUD com Flask + PostgreSQL
 --------------------------------------------------
 Requisitos:
-    pip install flask psycopg2-binary gunicorn python-dotenv
+    pip install flask psycopg2-binary
 
-Para rodar localmente:
+Antes de rodar, ajuste os dados de conexão em DB_CONFIG abaixo.
+Para rodar:
     python app.py
 Depois acesse: http://localhost:5000
 """
 
-import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 import psycopg2
-from dotenv import load_dotenv
 
-load_dotenv()  # Carrega variáveis do arquivo .env (apenas em ambiente local)
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "chave-padrao-dev")
+app.secret_key = "troque-esta-chave-em-producao"
+
+# =========================
+# CONFIGURAÇÃO DO BANCO
+# =========================
+import os
 
 # =========================
 # CONFIGURAÇÃO DO BANCO
@@ -35,11 +40,15 @@ else:
         "port": "5432",
         "dbname": "finances",
         "user": "postgres",
-        "password": os.environ.get("DB_PASSWORD", ""),
+        "password": os.environ.get("DB_PASSWORD", ""),  # ajuste local
     }
 
     def conectar():
         return psycopg2.connect(**DB_CONFIG)
+
+
+def conectar():
+    return psycopg2.connect(**DB_CONFIG)
 
 
 # =========================
