@@ -15,15 +15,26 @@ _pool = None
 def init_pool():
     global _pool
     if _pool is None:
-        _pool = pool.SimpleConnectionPool(
-            minconn=1,
-            maxconn=int(os.getenv("DB_POOL_MAX", "10")),
-            host=os.getenv("DB_HOST", "localhost"),
-            port=os.getenv("DB_PORT", "5432"),
-            dbname=os.getenv("DB_NAME", "financeiro"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", ""),
-        )
+        database_url = os.getenv("DATABASE_URL")
+
+        if database_url:
+            # Produção (Render): usa a URL única fornecida pelo banco
+            _pool = pool.SimpleConnectionPool(
+                minconn=1,
+                maxconn=int(os.getenv("DB_POOL_MAX", "10")),
+                dsn=database_url,
+            )
+        else:
+            # Local: usa variáveis separadas do .env
+            _pool = pool.SimpleConnectionPool(
+                minconn=1,
+                maxconn=int(os.getenv("DB_POOL_MAX", "10")),
+                host=os.getenv("DB_HOST", "localhost"),
+                port=os.getenv("DB_PORT", "5432"),
+                dbname=os.getenv("DB_NAME", "financeiro"),
+                user=os.getenv("DB_USER", "postgres"),
+                password=os.getenv("DB_PASSWORD", ""),
+            )
     return _pool
 
 

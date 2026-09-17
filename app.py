@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Carrega variáveis do arquivo .env (apenas em ambiente local)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="app/templates", static_folder="app/static")
 app.secret_key = os.environ.get("SECRET_KEY", "chave-padrao-dev")
 
 # =========================
